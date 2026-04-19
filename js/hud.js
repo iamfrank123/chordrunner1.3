@@ -266,43 +266,12 @@ const HUD = (() => {
   const attackTimerTextEl = document.getElementById('hud-combat-timer-text');
 
   function updateCombatTimer(pct, textStr) {
-    if (!attackTimerFillEl) return;
-    const p = Math.max(0, Math.min(1, pct));
-    const isDanger = p <= 0.25;
-    const color = p > 0.5 ? '#06d6a0' : (isDanger ? '#ff6b6b' : '#ffd166');
-    attackTimerFillEl.style.width = `${p * 100}%`;
-    attackTimerFillEl.style.background = color;
-
-    if (attackTimerTextEl) {
-      if (textStr) {
-        attackTimerTextEl.textContent = textStr;
-        attackTimerTextEl.style.color = color;
-      } else {
-        attackTimerTextEl.textContent = '';
-      }
-    }
+    // Migrato nel canvas (Cinematic Target)
   }
 
   function setCombatChord(chordKey, isHeavy) {
-    if (!combatPanelEl) return;
-    if (!chordKey) {
-      combatPanelEl.classList.add('hidden');
-      return;
-    }
-    combatPanelEl.classList.remove('hidden');
-    if (combatChordEl) {
-      combatChordEl.textContent = getChordLabel(chordKey);
-      combatChordEl.className   = isHeavy ? 'combat-chord heavy' : 'combat-chord';
-    }
-    // Reset timer visual
-    if (attackTimerFillEl) {
-      attackTimerFillEl.style.transition = 'none';
-      attackTimerFillEl.style.width = '100%';
-      attackTimerFillEl.style.background = '#06d6a0';
-      // Force reflow
-      void attackTimerFillEl.offsetWidth;
-      attackTimerFillEl.style.transition = 'width 0.1s linear';
-    }
+    // Migrato nel canvas (Cinematic Target)
+    if (combatPanelEl) combatPanelEl.classList.add('hidden');
   }
 
   function hideCombatChord() {

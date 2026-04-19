@@ -44,6 +44,13 @@ class CombatManager {
     this._monsterLabel = null;
     this._heavyBanner = null;
     this._auraTimer = 0;
+
+    // Cinematic Target System
+    this._targetOuterCircle = null;
+    this._targetInnerCircle = null;
+    this._targetChordLabel = null;
+    this._targetX = 0;
+    this._targetY = 0;
   }
 
   update(time, delta) {
@@ -220,8 +227,8 @@ class CombatManager {
     this._attackStart = this._scene.time.now;
     this._attackElapsed = 0; // reset local accumulator
 
-    // Mostra accordo richiesto in combat mode
-    HUD.setCombatChord(this._currentChord, this._isHeavy);
+    // Mostra bersaglio cinematico in fase di combat
+    this._createTargetVisual();
 
     // Heavy: slow motion + banner
     if (this._isHeavy) {
@@ -305,6 +312,63 @@ class CombatManager {
   }
 
   /* ─────────────────────────────────────────────────────────────
+     CINEMATIC CHORD TARGET
+  ───────────────────────────────────────────────────────────── */
+  _createTargetVisual() {
+    this._destroyTargetVisual();
+    const scene = this._scene;
+    const playerX = 80;
+    const monsterX = scene._W * 0.72;
+
+    // Posizione random tra la linea di azione (PLAY HERE) e il mostro, con altezza superiore
+    this._targetX = Phaser.Math.Between(CONFIG.TRIGGER_ZONE_X + 40, monsterX - 160);
+    this._targetY = scene._groundY - Phaser.Math.Between(160, 300);
+
+    this._targetInnerCircle = scene.add.graphics().setDepth(45);
+    this._targetOuterCircle = scene.add.graphics().setDepth(44);
+
+    this._targetInnerCircle.fillStyle(0x080a12, 0.85);
+    this._targetInnerCircle.lineStyle(4, 0xffffff, 0.5);
+    this._targetInnerCircle.fillCircle(this._targetX, this._targetY, 45);
+    this._targetInnerCircle.strokeCircle(this._targetX, this._targetY, 45);
+
+    this._targetInnerCircle.setScale(0);
+    scene.tweens.add({ targets: this._targetInnerCircle, scale: 1, duration: 250, ease: 'Back.Out' });
+
+    const chordLabelText = getChordLabel(this._currentChord);
+    this._targetChordLabel = scene.add.text(this._targetX, this._targetY, chordLabelText, {
+      fontFamily: 'Outfit, sans-serif', fontSize: this._isHeavy ? '36px' : '28px',
+      fontStyle: 'bold', color: this._isHeavy ? '#ffd166' : '#ffffff',
+    }).setOrigin(0.5).setDepth(46).setAlpha(0);
+
+    scene.tweens.add({ targets: this._targetChordLabel, alpha: 1, duration: 250 });
+
+    if (this._isHeavy) {
+      scene.tweens.add({
+        targets: this._targetChordLabel,
+        scaleX: 1.15, scaleY: 1.15,
+        duration: 350, yoyo: true, repeat: -1
+      });
+      this._targetInnerCircle.lineStyle(4, 0xffd166, 0.8);
+      this._targetInnerCircle.strokeCircle(this._targetX, this._targetY, 45);
+    }
+  }
+
+  _destroyTargetVisual() {
+    if (this._targetOuterCircle) { this._targetOuterCircle.destroy(); this._targetOuterCircle = null; }
+    if (this._targetInnerCircle) {
+      const c = this._targetInnerCircle;
+      this._scene.tweens.add({ targets: c, scale: 0, alpha: 0, duration: 150, onComplete: () => c.destroy() });
+      this._targetInnerCircle = null; 
+    }
+    if (this._targetChordLabel) {
+      const l = this._targetChordLabel;
+      this._scene.tweens.add({ targets: l, scale: 0, alpha: 0, duration: 150, onComplete: () => l.destroy() });
+      this._targetChordLabel = null; 
+    }
+  }
+
+  /* ─────────────────────────────────────────────────────────────
      ANTI-REPEAT: scegli accordo diverso dagli ultimi 4
   ───────────────────────────────────────────────────────────── */
   _getNextChord() {
@@ -361,6 +425,7 @@ class CombatManager {
   ───────────────────────────────────────────────────────────── */
   _onHit() {
     this._awaitingInput = false;
+    this._destroyTargetVisual();
     if (this._countdownTimer) this._countdownTimer.remove();
     if (this._uiTimer) this._uiTimer.remove();
 
@@ -404,6 +469,7 @@ class CombatManager {
   ───────────────────────────────────────────────────────────── */
   _onMiss(isWrongChord = false) {
     this._awaitingInput = false;
+    this._destroyTargetVisual();
     if (this._countdownTimer) this._countdownTimer.remove();
     if (this._uiTimer) this._uiTimer.remove();
 
@@ -649,6 +715,29 @@ class CombatManager {
         this._monsterSprite.displayWidth * 0.85
       );
     }
+
+    // UPDATE CINEMATIC TARGET
+    if (this._awaitingInput && this._countdownTimer && this._targetOuterCircle) {
+      const windowMs = this._chordWindowMs;
+      const elapsed = this._countdownTimer.getElapsed();
+      const pct = 1.0 - (elapsed / windowMs); // 1.0 -> 0.0
+      const p = Math.max(0, Math.min(1, pct));
+      
+      const isDanger = p <= 0.25;
+      const color = p > 0.5 ? 0x06d6a0 : (isDanger ? 0xff6b6b : 0xffd166);
+
+      this._targetOuterCircle.clear();
+      this._targetOuterCircle.lineStyle(isDanger ? 8 : 5, color, 0.9);
+      
+      const targetRadius = 45;
+      const maxRadius = 160;
+      const radius = targetRadius + ((maxRadius - targetRadius) * p);
+      this._targetOuterCircle.strokeCircle(this._targetX, this._targetY, radius);
+      
+      if (isDanger && this._targetInnerCircle) {
+        this._targetInnerCircle.alpha = 0.6 + 0.4 * Math.sin(time * 0.02);
+      }
+    }
   }
 
   /* ─────────────────────────────────────────────────────────────
@@ -664,6 +753,7 @@ class CombatManager {
   ───────────────────────────────────────────────────────────── */
   destroy() {
     this._active = false;
+    this._destroyTargetVisual();
     if (this._attackTimer) this._attackTimer.remove();
     if (this._countdownTimer) this._countdownTimer.remove();
     if (this._monsterSprite) this._monsterSprite.destroy();
