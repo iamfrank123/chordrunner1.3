@@ -1,0 +1,12 @@
+{
+  "name": "midi-chord-runner",
+  "version": "1.0.0",
+  "description": "Browser game 2D — suona accordi MIDI per saltare gli ostacoli",
+  "scripts": {
+    "dev": "npx --yes serve . -p 3000 --no-clipboard",
+    "start": "npx --yes serve . -p 3000"
+  },
+  "keywords": ["midi", "game", "phaser", "chords", "music"],
+  "author": "",
+  "license": "MIT"
+}

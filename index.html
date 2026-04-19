@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description"
+    content="MIDI Chord Runner — Play chords with your MIDI piano and make your character jump!" />
+  <title>🎹 MIDI Chord Runner</title>
+  <script>
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'css/style.css?v=' + Date.now();
+    document.head.appendChild(link);
+  </script>
+
+  <!-- Phaser 3 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+</head>
+
+<body>
+  <div id="app-wrapper">
+    <!-- Overlay: Selezione sorgente MIDI / fallback -->
+    <div id="midi-overlay" class="overlay hidden">
+      <div class="overlay-box">
+        <h2>🎮 Setup Game</h2>
+        <p>Choose your modes and difficulty:</p>
+
+        <!-- Horizontal Modes Grid -->
+        <div class="desktop-modes-grid" style="margin-bottom: 24px;">
+          
+          <!-- Standard Levels -->
+          <label class="mode-col">
+            <div style="margin-bottom: 12px;"><input type="radio" name="game_mode" value="levels" style="margin-right: 8px; accent-color: #3aa8e8;" checked><b>Standard Levels</b></div>
+            <div id="levels-panel" style="flex: 1;">
+              <select id="level-select" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-family: 'Outfit'; font-size: 0.9rem; outline: none; cursor: pointer;"></select>
+            </div>
+          </label>
+
+          <!-- Customised Chords -->
+          <label class="mode-col">
+            <div style="margin-bottom: 12px;"><input type="radio" name="game_mode" value="custom" style="margin-right: 8px; accent-color: #06d6a0;"><b>Customised Mode</b></div>
+            <div id="custom-chords-panel" class="hidden" style="flex: 1;">
+              <div style="font-weight: bold; margin-bottom: 6px; color: #fff; font-size: 0.85rem;">Chord Types:</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; font-size: 0.8rem; color: #d1d1e0;">
+                <label><input type="checkbox" value="major" class="custom-type-cb" checked> Maj</label>
+                <label><input type="checkbox" value="minor" class="custom-type-cb" checked> Min</label>
+                <label><input type="checkbox" value="aug" class="custom-type-cb"> Aug</label>
+                <label><input type="checkbox" value="dim" class="custom-type-cb"> Dim</label>
+                <label><input type="checkbox" value="sus2" class="custom-type-cb"> Sus2</label>
+                <label><input type="checkbox" value="sus4" class="custom-type-cb"> Sus4</label>
+                <label><input type="checkbox" value="maj7" class="custom-type-cb"> Maj7</label>
+                <label><input type="checkbox" value="min7" class="custom-type-cb"> Min7</label>
+                <label><input type="checkbox" value="dom7" class="custom-type-cb"> Dom7</label>
+                <label><input type="checkbox" value="halfdim" class="custom-type-cb"> m7b5</label>
+                <label><input type="checkbox" value="maj9" class="custom-type-cb"> Maj9</label>
+                <label><input type="checkbox" value="min9" class="custom-type-cb"> Min9</label>
+                <label><input type="checkbox" value="dom9" class="custom-type-cb"> Dom9</label>
+              </div>
+              <div style="font-weight: bold; margin-bottom: 6px; color: #fff; font-size: 0.85rem;">Roots:</div>
+              <div style="display: flex; gap: 12px; font-size: 0.8rem; color: #d1d1e0;">
+                <label><input type="radio" name="custom_roots" value="natural" checked> Natural</label>
+                <label><input type="radio" name="custom_roots" value="all"> All</label>
+              </div>
+            </div>
+          </label>
+
+          <!-- Survival Mode -->
+          <label class="mode-col" id="mode-col-survival">
+            <div style="margin-bottom: 12px; color: #ffd166;"><input type="radio" name="game_mode" value="survival" style="margin-right: 8px; accent-color: #ffd166;"><b>⚔️ Survival Mode</b></div>
+            <div id="survival-panel" class="hidden" style="flex: 1; display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <div style="font-weight: bold; margin-bottom: 6px; color: #ffd166; font-size: 0.85rem;">🎵 Obstacle Chords:</div>
+                <select id="survival-chord-level" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,209,102,0.3); font-family: 'Outfit'; font-size: 0.9rem; outline: none; cursor: pointer;">
+                  <option value="0">Easy — Major only</option>
+                  <option value="2" selected>Normal — Major + Minor</option>
+                  <option value="survival_hard">Hard — Maj, Min, 7ths</option>
+                  <option value="survival_harder">Harder — Maj, Min, 7ths, Aug, Dim</option>
+                  <option value="8">Extreme — All Chords</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-weight: bold; margin-bottom: 6px; color: #ffd166; font-size: 0.85rem;">🎹 Monster Response Window:</div>
+                <select id="monster-chord-window" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,209,102,0.3); font-family: 'Outfit'; font-size: 0.9rem; outline: none; cursor: pointer;">
+                  <option value="10000">Easy (10s)</option>
+                  <option value="8000" selected>Medium (8s)</option>
+                  <option value="5000">Hard (5s)</option>
+                  <option value="custom">Customised seconds...</option>
+                </select>
+                <input type="number" id="monster-window-custom" value="7" min="1" max="60" style="display:none; margin-top: 8px; width: 100%; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #ffd166; font-family: 'Outfit'; outline: none;">
+            </div>
+            <div>
+              <div style="font-weight: bold; margin-bottom: 6px; color: #ffd166; font-size: 0.85rem;">🎹 Chord Roots:</div>
+              <div style="display: flex; gap: 16px; font-size: 0.85rem; color: #e0d5b0;">
+                <label style="display:flex; align-items:center; gap:6px;"><input type="radio" name="survival_roots" value="natural" checked style="accent-color:#ffd166;"> Natural</label>
+                <label style="display:flex; align-items:center; gap:6px;"><input type="radio" name="survival_roots" value="all" style="accent-color:#ffd166;"> All</label>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+              <div style="font-weight: bold; color: #ffd166; font-size: 0.85rem;">⏱️ Mode:</div>
+              <div style="display: flex; gap: 16px;">
+                <label style="font-size: 0.85rem; color: #e0d5b0; display:flex; align-items:center; gap:6px;"><input type="radio" name="survival_type" value="timed" checked style="accent-color: #ffd166;"> Timed</label>
+                <label style="font-size: 0.85rem; color: #e0d5b0; display:flex; align-items:center; gap:6px;"><input type="radio" name="survival_type" value="unlimited" style="accent-color: #ffd166;"> Unlimited</label>
+              </div>
+              <div id="survival-timer-row">
+                <select id="survival-duration" style="width: 100%; margin-top: 6px; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,209,102,0.3); font-family: 'Outfit'; font-size: 0.9rem; outline: none; cursor: pointer;">
+                  <option value="60">60s Duration</option>
+                  <option value="90">90s Duration</option>
+                  <option value="120" selected>120s Duration</option>
+                  <option value="180">180s Duration</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </label>
+
+        </div>
+
+        <!-- Global Setup Settings Bar -->
+        <div class="global-setup-bar" style="margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 0.9rem; font-weight: bold; color: #fff;">Obstacle Respawn:</div>
+            <select id="speed-select" style="padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-family: 'Outfit'; font-size: 0.9rem; outline: none; cursor: pointer;">
+              <option value="10000">Every 10 seconds</option>
+              <option value="8000">Every 8 seconds</option>
+              <option value="5000" selected>Every 5 seconds</option>
+              <option value="custom">Customised...</option>
+            </select>
+            <input type="number" id="speed-custom-val" value="7" min="1" max="60" style="display:none; width: 60px; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #3aa8e8; font-family: 'Outfit'; outline: none;">
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 0.9rem; font-weight: bold; color: #fff;">Run Duration:</div>
+            <select id="duration-select" style="padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-family: 'Outfit'; font-size: 0.9rem; outline: none; cursor: pointer;">
+              <option value="60" selected>60 Seconds</option>
+              <option value="90">90 Seconds</option>
+              <option value="120">120 Seconds</option>
+              <option value="300">300 Seconds</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+            <input type="checkbox" id="wait-mode-toggle" style="width: 20px; height: 20px; cursor: pointer; accent-color: #a29bfe;" checked>
+            <label for="wait-mode-toggle" style="cursor: pointer; color: #a29bfe; font-size: 0.95rem;">
+              <b>Stop on each chord</b>
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+            <input type="checkbox" id="wrong-penalty-toggle" style="width: 20px; height: 20px; cursor: pointer; accent-color: #ff6b6b;" checked>
+            <label for="wrong-penalty-toggle" style="cursor: pointer; color: #ff6b6b; font-size: 0.95rem;">
+              <b>Wrong Chord Penalty</b>
+            </label>
+          </div>
+        </div>
+
+        <div class="overlay-buttons">
+          <button id="btn-midi" class="btn-primary">🎹 Use MIDI Keyboard</button>
+          <button id="btn-virtual" class="btn-secondary">🖱️ Use Virtual Keys</button>
+        </div>
+        <p id="midi-status" class="status-text"></p>
+      </div>
+    </div>
+
+    <!-- Overlay: Game Over -->
+    <div id="gameover-overlay" class="overlay hidden">
+      <div class="overlay-box">
+        <h2>💀 Game Over</h2>
+        <p id="final-score-text">Final Score: 0</p>
+        <button id="btn-restart" class="btn-primary">🔄 Try Again</button>
+        <button id="btn-main-menu-fail" class="btn-secondary" style="margin-top: 10px; background-color: #3aa8e8;">🏠
+          Main Menu</button>
+      </div>
+    </div>
+
+    <!-- Overlay: Survival Complete ⚔️ -->
+    <div id="survival-overlay" class="overlay hidden">
+      <div class="overlay-box survival-box">
+        <h2 id="surv-title">⚔️ Survived!</h2>
+        <hr class="surv-divider">
+        <div class="surv-time-display">
+          <span class="surv-time-label">⏱ Time Survived</span>
+          <span id="surv-time">0:00</span>
+        </div>
+        <div class="surv-stats-grid">
+          <div class="surv-stat">
+            <div class="surv-val" id="surv-correct">0</div>
+            <div class="surv-lbl">✅ Correct</div>
+          </div>
+          <div class="surv-stat">
+            <div class="surv-val" id="surv-wrong">0</div>
+            <div class="surv-lbl">❌ Wrong</div>
+          </div>
+          <div class="surv-stat">
+            <div class="surv-val" id="surv-monsters">0</div>
+            <div class="surv-lbl">👾 Monsters</div>
+          </div>
+          <div class="surv-stat">
+            <div class="surv-val" id="surv-accuracy">—%</div>
+            <div class="surv-lbl">🎯 Accuracy</div>
+          </div>
+        </div>
+        <div class="surv-score" id="surv-score">Score: 0</div>
+        <button id="btn-surv-restart" class="btn-primary">🔄 Play Again</button>
+        <button id="btn-surv-menu" class="btn-secondary" style="margin-top:8px;background:#3aa8e8;">🏠 Main Menu</button>
+      </div>
+    </div>
+
+    <!-- Overlay: Level Complete -->
+    <div id="levelcomplete-overlay" class="overlay hidden">
+      <div class="overlay-box">
+        <h2>🏆 Level Complete!</h2>
+        <p id="level-score-text">Score: 0</p>
+        <button id="btn-nextlevel" class="btn-primary">➡️ Next Level</button>
+        <button id="btn-repeat-level-win" class="btn-secondary"
+          style="margin-top: 10px; background-color: #ff9500; border: none; padding: 12px 24px; border-radius: 8px; color: #fff; font-size: 1.1rem; font-family: 'Outfit', sans-serif; cursor: pointer;">🔄
+          Repeat Level</button>
+        <button id="btn-main-menu-win" class="btn-secondary"
+          style="margin-top: 10px; background-color: #3aa8e8; border: none; padding: 12px 24px; border-radius: 8px; color: #fff; font-size: 1.1rem; font-family: 'Outfit', sans-serif; cursor: pointer;">🏠
+          Main Menu</button>
+      </div>
+    </div>
+
+    <!-- HUD esterno al canvas -->
+    <div id="hud">
+      <button id="btn-home-hud"
+        style="background: rgba(0,0,0,0.6); border: 2px solid white; border-radius: 8px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; padding: 0 12px; margin-right: 8px;"
+        title="Main Menu">🏠</button>
+
+      <!-- Runner HUD -->
+      <div id="hud-lives">❤️ <span id="lives-count">5</span></div>
+      <div id="hud-score">⭐ <span id="score-count">0</span></div>
+      <div id="hud-timer">⏱️ <span id="timer-count">60</span><span id="timer-unit">s</span></div>
+      <div id="hud-level">🎵 <span id="level-name">Level 1</span>
+        <div id="hud-preview" class="hidden"
+          style="color: #06d6a0; font-size: 0.75rem; margin-top: 4px; line-height: 1.2;"></div>
+      </div>
+      <div id="hud-speed">🚀 <span id="speed-name">Fast (3s)</span></div>
+
+      <!-- Combat: Player HP (Obsolete, merged with runner life) -->
+      <div id="hud-player-hp" style="display:none; font-size: 1.1rem; letter-spacing: 2px;">❤️❤️❤️❤️❤️</div>
+    </div>
+
+
+    <!-- Combat: Chord Panel (durante combat) -->
+    <div id="hud-combat-panel" class="hidden">
+      <div id="hud-combat-timer-text" style="font-family: monospace; font-size: 1.1rem; font-weight: bold; color: #ffd166; margin-bottom: 4px; text-shadow: 1px 1px 2px #000;">8.0s</div>
+      <div style="width:100%; height:8px; background:rgba(0,0,0,0.5); border-radius:4px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.2); overflow:hidden;">
+        <div id="hud-combat-timer-fill" style="height:100%; width:100%; background:#ffd166; border-radius:4px;"></div>
+      </div>
+      <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-bottom: 3px;">⚔️ Attack chord:</div>
+      <span id="hud-combat-chord" class="combat-chord">—</span>
+    </div>
+
+    <!-- Event Banner (heavy attack, heal orb, etc.) -->
+    <div id="hud-event-banner" class="hidden" style=""></div>
+
+    <!-- Heal Orb Panel -->
+    <div id="hud-heal-orb-panel" class="hidden">
+      <div style="font-size: 0.8rem; color: #06d6a0; margin-bottom: 4px;">💖 Play note:</div>
+      <div id="hud-heal-orb-note" style="font-size: 1.6rem; font-weight: bold; color: #fff;">C</div>
+    </div>
+
+    <!-- Canvas Phaser -->
+    <div id="game-container"></div>
+
+    <!-- Pannello accordo richiesto (sotto il canvas) -->
+    <div id="chord-panel">
+      <div id="chord-required">
+        <span class="chord-label">Required chord:</span>
+        <span id="chord-name" class="chord-name">—</span>
+      </div>
+      <div id="chord-played">
+        <span class="chord-label">You are playing:</span>
+        <span id="notes-played" class="chord-name dim">—</span>
+      </div>
+    </div>
+
+    <!-- Tastiera virtuale mobile -->
+    <div id="virtual-keyboard" class="hidden">
+      <p class="vk-label">Touch a chord to play:</p>
+      <div id="vk-buttons"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    (function(){
+      var v = '?v=' + Date.now();
+      var scripts = [
+        "js/config.js",
+        "js/chords.js",
+        "js/midi.js",
+        "js/hud.js",
+        "js/combat/GameState.js",
+        "js/combat/MonsterSystem.js",
+        "js/combat/HealOrb.js",
+        "js/combat/CombatScene.js",
+        "js/scenes/BootScene.js",
+        "js/scenes/GameScene.js",
+        "js/scenes/UIScene.js",
+        "js/main.js"
+      ];
+      scripts.forEach(function(s) {
+        document.write('<script src="' + s + v + '"><\/script>');
+      });
+    })();
+  </script>
+</body>
+
+</html>
