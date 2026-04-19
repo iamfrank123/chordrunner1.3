@@ -568,8 +568,6 @@ class GameScene extends Phaser.Scene {
       if (obs._label?.active) { obs._label.x = obs.x; obs._label.y = obs.y - obs.displayHeight - 14; }
 
       if (obs.state === 'incoming' && obs.x <= trigX + 60) {
-        // Non attivare ostacoli se il mostro è pending (campo deve liberarsi)
-        if (this._monsterPending) return;
         obs.state = 'active'; obs.timingStart = this.time.now;
         this._activeObstacle = obs; this._requiredChord = obs.chordKey;
         HUD.setRequiredChord(obs.chordKey);

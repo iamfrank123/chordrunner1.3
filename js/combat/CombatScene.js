@@ -329,8 +329,8 @@ class CombatManager {
 
     this._targetInnerCircle.fillStyle(0x080a12, 0.85);
     this._targetInnerCircle.lineStyle(4, 0xffffff, 0.5);
-    this._targetInnerCircle.fillCircle(this._targetX, this._targetY, 45);
-    this._targetInnerCircle.strokeCircle(this._targetX, this._targetY, 45);
+    this._targetInnerCircle.fillCircle(this._targetX, this._targetY, 60);
+    this._targetInnerCircle.strokeCircle(this._targetX, this._targetY, 60);
 
     this._targetInnerCircle.setScale(0);
     scene.tweens.add({ targets: this._targetInnerCircle, scale: 1, duration: 250, ease: 'Back.Out' });
@@ -350,7 +350,7 @@ class CombatManager {
         duration: 350, yoyo: true, repeat: -1
       });
       this._targetInnerCircle.lineStyle(4, 0xffd166, 0.8);
-      this._targetInnerCircle.strokeCircle(this._targetX, this._targetY, 45);
+      this._targetInnerCircle.strokeCircle(this._targetX, this._targetY, 60);
     }
   }
 
@@ -729,8 +729,8 @@ class CombatManager {
       this._targetOuterCircle.clear();
       this._targetOuterCircle.lineStyle(isDanger ? 8 : 5, color, 0.9);
       
-      const targetRadius = 45;
-      const maxRadius = 160;
+      const targetRadius = 60;
+      const maxRadius = 120;
       const radius = targetRadius + ((maxRadius - targetRadius) * p);
       this._targetOuterCircle.strokeCircle(this._targetX, this._targetY, radius);
       
